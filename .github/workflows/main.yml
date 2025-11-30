@@ -28,4 +28,4 @@ jobs:
         # Kalau mau maksa 7B ganti aja jadi 'deepseek-r1:7b'
         run: |
           echo "Tanya: Kenapa air laut asin? (Tunjukkan cara mikirmu)"
-          ollama run deepseek-r1:1.5b "Kenapa air laut asin? Jawab bahasa Indonesia dan tunjukkan <think> process-nya."
+          ollama run deepseek-r1:7b "Jelaskan secara ilmiah kenapa air laut rasanya asin? Gunakan Bahasa Indonesia."

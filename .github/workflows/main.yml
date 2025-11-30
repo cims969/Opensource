@@ -1,52 +1,31 @@
-name: n8n DEBUG MODE
-on: 
-  workflow_dispatch:
+name: Test DeepSeek di GitHub Actions
+on: workflow_dispatch # Biar bisa di-klik tombol "Run" manual
 
 jobs:
-  debug-n8n:
-    runs-on: ubuntu-latest
+  test-thinking-ai:
+    runs-on: ubuntu-latest # Ini yang dapet 16GB RAM
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: 1. Start n8n (Log Level: Debug)
+      - name: Cek Spesifikasi Runner
         run: |
-          echo "Start n8n..."
-          
-          # Gue tambahin N8N_LOG_LEVEL=debug biar cerewet
-          # Gue tambahin SSL Reject false biar gak error sertifikat
-          
-          docker run -d \
-            --name n8n \
-            -p 5678:5678 \
-            -e N8N_SECURE_COOKIE=false \
-            -e N8N_PROTOCOL=https \
-            -e N8N_LOG_LEVEL=debug \
-            -e DB_TYPE=postgresdb \
-            -e DB_POSTGRESDB_HOST="aws-1-ap-northeast-2.pooler.supabase.com" \
-            -e DB_POSTGRESDB_PORT="6543" \
-            -e DB_POSTGRESDB_DATABASE="postgres" \
-            -e DB_POSTGRESDB_USER="postgres.iziozhblgzhokbeoefei" \
-            -e DB_POSTGRESDB_PASSWORD="${{ secrets.DB_PASS }}" \
-            -e DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false \
-            n8nio/n8n:latest
-          
-          echo "Nunggu 20 detik..."
-          sleep 20
+          echo "=== CPU Info ==="
+          lscpu | grep 'Model name'
+          echo "=== RAM Info ==="
+          free -h
+          echo "=== Disk Info ==="
+          df -h
 
-      - name: 2. >>> LIAT ERROR DISINI <<<
-        if: always() # Step ini bakal tetep jalan walau n8n mati
-        run: |
-          echo "=========================================="
-          echo "   INI ISI PERUT N8N (ERROR LOG)   "
-          echo "=========================================="
-          docker logs n8n
-          echo "=========================================="
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
 
-      - name: 3. Start Cloudflare Tunnel
+      - name: Jalankan Ollama Server
+        run: ollama serve &
+
+      - name: Tunggu Server Nyala
+        run: sleep 10
+
+      - name: Download & Run DeepSeek-R1 (1.5B)
+        # Kita pake 1.5B biar sat-set di CPU. 
+        # Kalau mau maksa 7B ganti aja jadi 'deepseek-r1:7b'
         run: |
-          docker run \
-            --name cloudflared \
-            --network host \
-            cloudflare/cloudflared:latest \
-            tunnel --no-autoupdate run --token ${{ secrets.CF_TOKEN }}
+          echo "Tanya: Kenapa air laut asin? (Tunjukkan cara mikirmu)"
+          ollama run deepseek-r1:1.5b "Kenapa air laut asin? Jawab bahasa Indonesia dan tunjukkan <think> process-nya."

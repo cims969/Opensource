@@ -1,75 +1,22 @@
-name: VPS Sultan (Ubuntu + Zsh)
-on:
+name: Jalanin n8n dengan Public URL
+on: 
   workflow_dispatch:
 
 jobs:
-  gh-vps-ubuntu:
+  n8n-live:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      # 1. START CONTAINER UBUNTU (Kosongan Dulu)
-      - name: Start Ubuntu Container
+      - name: Run n8n Docker
         run: |
-          # Kita pake ubuntu:22.04 biar stabil
-          # tail -f /dev/null = Trik biar container nyala terus walau belum ngapa-ngapain
-          docker run -d --name vps-sultan \
-            -p 7681:7681 \
-            -v ${{ github.workspace }}:/root/project \
-            ubuntu:22.04 \
-            tail -f /dev/null
+          docker run -d --name n8n -p 5678:5678 -e N8N_SECURE_COOKIE=false n8nio/n8n:latest
+          echo "Lagi booting n8n..."
+          sleep 10
 
-      # 2. INSTALL ZSH, TOOLS & OH-MY-ZSH (Biar Ganteng)
-      - name: Install Dependencies & Zsh
-        run: |
-          echo "Lagi update repository Ubuntu..."
-          docker exec vps-sultan apt-get update
-          
-          echo "Install Zsh, Git, Nano, Curl, Sudo..."
-          # Install tools wajib buat developer
-          docker exec vps-sultan apt-get install -y zsh git curl wget nano sudo net-tools build-essential
-          
-          echo "Install Oh My Zsh (Auto)..."
-          # Script sakti buat install Oh My Zsh tanpa nanya-nanya (unattended)
-          docker exec vps-sultan sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-          
-          # Ganti tema jadi 'agnoster' (yang ada panah-panahnya) atau biarin default 'robbyrussell'
-          docker exec vps-sultan sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="robbyrussell"/g' /root/.zshrc
-          
-          # Set Zsh jadi default shell
-          docker exec vps-sultan chsh -s /bin/zsh root
+      - name: Install Localtunnel
+        run: npm install -g localtunnel
 
-      # 3. SETUP WEB TERMINAL (ttyd) DI UBUNTU
-      - name: Setup ttyd
+      - name: Buka Tunnel (Public URL)
         run: |
-          # Download ttyd binary (versi Linux x86_64)
-          docker exec vps-sultan wget -O /usr/bin/ttyd https://github.com/tsl0922/ttyd/releases/download/1.7.3/ttyd.x86_64
-          # Kasih izin execute
-          docker exec vps-sultan chmod +x /usr/bin/ttyd
-
-      # 4. JALANIN TERMINALNYA
-      - name: Execute Web Terminal
-        run: |
-          # Matikan process tail tadi, ganti jadi ttyd
-          # -c admin:password123 = GANTI PASSWORD LO DISINI!
-          docker exec -d vps-sultan ttyd -c admin:password123 -W zsh
-
-      # 5. KONEK KE CLOUDFLARE
-      - name: Start Cloudflare Tunnel
-        run: |
-          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared.deb
-          # Konek ke localhost:7681
-          sudo cloudflared service install ${{ secrets.CF_TOKEN }}
-          sudo service cloudflared start
-
-      # 6. LOOPING BIAR GAK MATI (5.5 Jam)
-      - name: Server Ubuntu Online!
-        run: |
-          echo "=============================================="
-          echo "VPS UBUNTU + ZSH UDAH READY!"
-          echo "User: admin | Pass: password123"
-          echo "Shell: Zsh (Oh My Zsh Installed)"
-          echo "=============================================="
-          sleep 19800
+          echo "Nih URL n8n lu (klik aja):"
+          # Ini bakal nahan process biar gak langsung close
+          lt --port 5678

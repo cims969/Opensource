@@ -1,56 +1,75 @@
-name: VPS Gratisan Gabut
+name: VPS Sultan (Ubuntu + Zsh)
 on:
-  workflow_dispatch: # Biar bisa diklik Start manual
+  workflow_dispatch:
 
 jobs:
-  start-vps:
+  gh-vps-ubuntu:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # 1. SETUP & JALANIN DOCKER TERMINAL (ttyd)
-      - name: Start Terminal Container
+      # 1. START CONTAINER UBUNTU (Kosongan Dulu)
+      - name: Start Ubuntu Container
         run: |
-          # Kita pake image ttyd yang enteng (Alpine Linux)
-          # -p 7681:7681 = Buka port web terminal
-          # -v ${{ github.workspace }}:/root/project = Biar file project lo masuk ke dalem container
-          # -c admin:password123 = PASSWORD LOGIN (Ganti ini biar ga dihack orang!)
-          
-          docker run -d --name vps-gabut \
+          # Kita pake ubuntu:22.04 biar stabil
+          # tail -f /dev/null = Trik biar container nyala terus walau belum ngapa-ngapain
+          docker run -d --name vps-sultan \
             -p 7681:7681 \
             -v ${{ github.workspace }}:/root/project \
-            tsl0922/ttyd:alpine \
-            ttyd -W -c admin:password123 sh
+            ubuntu:22.04 \
+            tail -f /dev/null
 
-      # 2. INSTALL TOOLS DI DALEM CONTAINER (Biar ga kosongan)
-      - name: Install Tools (Bash, Git, Curl, Node)
+      # 2. INSTALL ZSH, TOOLS & OH-MY-ZSH (Biar Ganteng)
+      - name: Install Dependencies & Zsh
         run: |
-          echo "Lagi install tools, tunggu bentar..."
-          # Update repo alpine & install bash, git, curl, nano, nodejs
-          docker exec -u 0 vps-gabut apk update
-          docker exec -u 0 vps-gabut apk add bash git curl nano nodejs npm
+          echo "Lagi update repository Ubuntu..."
+          docker exec vps-sultan apt-get update
           
-          # Ganti shell default jadi bash biar enak
-          docker exec -u 0 vps-gabut sed -i 's|/bin/sh|/bin/bash|g' /etc/passwd
-          echo "Tools siap! Terminal udah canggih sekarang."
+          echo "Install Zsh, Git, Nano, Curl, Sudo..."
+          # Install tools wajib buat developer
+          docker exec vps-sultan apt-get install -y zsh git curl wget nano sudo net-tools build-essential
+          
+          echo "Install Oh My Zsh (Auto)..."
+          # Script sakti buat install Oh My Zsh tanpa nanya-nanya (unattended)
+          docker exec vps-sultan sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+          
+          # Ganti tema jadi 'agnoster' (yang ada panah-panahnya) atau biarin default 'robbyrussell'
+          docker exec vps-sultan sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="robbyrussell"/g' /root/.zshrc
+          
+          # Set Zsh jadi default shell
+          docker exec vps-sultan chsh -s /bin/zsh root
 
-      # 3. KONEK KE CLOUDFLARE TUNNEL
+      # 3. SETUP WEB TERMINAL (ttyd) DI UBUNTU
+      - name: Setup ttyd
+        run: |
+          # Download ttyd binary (versi Linux x86_64)
+          docker exec vps-sultan wget -O /usr/bin/ttyd https://github.com/tsl0922/ttyd/releases/download/1.7.3/ttyd.x86_64
+          # Kasih izin execute
+          docker exec vps-sultan chmod +x /usr/bin/ttyd
+
+      # 4. JALANIN TERMINALNYA
+      - name: Execute Web Terminal
+        run: |
+          # Matikan process tail tadi, ganti jadi ttyd
+          # -c admin:password123 = GANTI PASSWORD LO DISINI!
+          docker exec -d vps-sultan ttyd -c admin:password123 -W zsh
+
+      # 5. KONEK KE CLOUDFLARE
       - name: Start Cloudflare Tunnel
         run: |
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
-          # Konek ke localhost:7681 (Port terminal container tadi)
+          # Konek ke localhost:7681
           sudo cloudflared service install ${{ secrets.CF_TOKEN }}
           sudo service cloudflared start
 
-      # 4. TUNGU 5.5 JAM (LOOPING)
-      - name: Server Online - Jangan di Close Tab-nya
+      # 6. LOOPING BIAR GAK MATI (5.5 Jam)
+      - name: Server Ubuntu Online!
         run: |
           echo "=============================================="
-          echo "VPS LO UDAH ONLINE, BOS!"
-          echo "Buka domain lo di browser."
-          echo "Login pake User: admin | Pass: password123"
+          echo "VPS UBUNTU + ZSH UDAH READY!"
+          echo "User: admin | Pass: password123"
+          echo "Shell: Zsh (Oh My Zsh Installed)"
           echo "=============================================="
-          echo "Gw bakal tidur 5 jam 30 menit..."
           sleep 19800

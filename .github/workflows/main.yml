@@ -1,4 +1,4 @@
-name: n8n Korea Server Fix
+name: n8n Korea Anti-Crash
 on: 
   workflow_dispatch:
 
@@ -9,12 +9,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: 1. Start n8n (Server Korea)
+      - name: 1. Start n8n (Pecah Variable)
         run: |
-          echo "Gas nyalain n8n..."
-          echo "Konek ke Region: Korea (ap-northeast-2)"
+          echo "Gas nyalain n8n (Korea Server)..."
           
-          # Kita pake CONNECTION STRING dari Secret
+          # Kita pake metode Variable Terpisah
+          # Ini AMAN walau password lu ada karakter aneh (@ # /)
+          
           docker run -d \
             --name n8n \
             -p 5678:5678 \
@@ -22,23 +23,26 @@ jobs:
             -e N8N_PROTOCOL=https \
             -e N8N_ENCRYPTION_KEY="kuncirahasiajuragan123" \
             -e DB_TYPE=postgresdb \
-            -e DB_POSTGRESDB_CONNECTION_STRING="${{ secrets.DB_URL }}" \
+            -e DB_POSTGRESDB_HOST="aws-1-ap-northeast-2.pooler.supabase.com" \
+            -e DB_POSTGRESDB_PORT="6543" \
+            -e DB_POSTGRESDB_DATABASE="postgres" \
+            -e DB_POSTGRESDB_USER="postgres.iziozhblgzhokbeoefei" \
+            -e DB_POSTGRESDB_PASSWORD="${{ secrets.DB_PASS }}" \
+            -e DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false \
             n8nio/n8n:latest
           
           echo "Lagi inisialisasi Database (Tunggu 20 detik)..."
           sleep 20
 
-      - name: 2. CEK STATUS (Jaga-jaga)
+      - name: 2. CEK LOG (Kalo Masih Error Liat Sini)
         run: |
-          echo "=== APAKAH N8N HIDUP? ==="
-          docker ps
-          echo "=== LOG TERAKHIR ==="
-          docker logs n8n --tail 20
+          echo "=== LOG N8N ==="
+          docker logs n8n --tail 50
+          echo "==============="
 
       - name: 3. Start Cloudflare Tunnel
         run: |
           echo "Online-kan..."
-          # Pastikan service tunnel di dashboard Cloudflare: HTTP -> 127.0.0.1:5678
           docker run \
             --name cloudflared \
             --network host \

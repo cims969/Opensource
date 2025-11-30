@@ -1,4 +1,4 @@
-name: n8n Auto Login (CF Token Secret)
+name: n8n Auto Login (FIX PERMISSION)
 on: 
   workflow_dispatch:
 
@@ -12,7 +12,7 @@ jobs:
       - name: 1. Start n8n Docker
         run: |
           echo "Gas nyalain n8n..."
-          # Jalanin n8n di background
+          # Fix permission volume biar gak rewel
           docker run -d \
             --name n8n \
             -p 5678:5678 \
@@ -23,12 +23,13 @@ jobs:
           echo "Tidur 30 detik buat init DB..."
           sleep 30
 
-      - name: 2. Auto Setup Akun (Hardcoded)
+      - name: 2. Auto Setup Akun (User Node)
         run: |
           echo "Inject akun admin..."
-          # Email & Pass langsung ditulis disini (Hardcode)
-          # Command pake versi baru v1+
-          docker exec n8n n8n user:management:user:create \
+          
+          # PERHATIKAN: --user node
+          # Ini kuncinya biar dia bisa baca database dan nemu command-nya
+          docker exec --user node n8n n8n user:management:user:create \
             --email "admin@ngadimin.com" \
             --password "Juragan123!" \
             --firstName "Admin" \
@@ -37,7 +38,7 @@ jobs:
       - name: 3. Start Cloudflare Tunnel
         run: |
           echo "Konek ke Cloudflare..."
-          # Token tetep ambil dari Secret yang udah lu punya
+          # Token dari SECRET
           docker run \
             --name cloudflared \
             --network host \

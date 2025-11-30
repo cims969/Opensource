@@ -1,4 +1,4 @@
-name: n8n Auto Login (Pre-Seed Method)
+name: n8n Manual Setup (CF Tunnel)
 on: 
   workflow_dispatch:
 
@@ -9,45 +9,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: 1. Siapin Folder Data
+      - name: 1. Start n8n Docker
         run: |
-          echo "Bikin folder database..."
-          mkdir -p n8n-data
-          # Jebolin permission biar Docker user (node) bisa nulis
-          chmod 777 n8n-data
-
-      - name: 2. Create User Dulu (Pre-Run)
-        run: |
-          echo "Generate database & user..."
-          # Kita jalanin container SEKALI LEWAT (--rm) cuma buat bikin user
-          # Database disimpen di folder 'n8n-data'
-          docker run --rm \
-            -v ${{ github.workspace }}/n8n-data:/home/node/.n8n \
-            n8nio/n8n:latest \
-            n8n user:management:user:create \
-            --email "admin@ngadimin.com" \
-            --password "Juragan123!" \
-            --firstName "Admin" \
-            --lastName "Ganteng"
-
-      - name: 3. Start n8n Server (Load Data Tadi)
-        run: |
-          echo "Gas nyalain server..."
-          # Sekarang jalanin server utama pake folder data yang udah ada user-nya
+          echo "Gas nyalain n8n polosan..."
+          # Gak ada command aneh-aneh, cuma jalanin doang
           docker run -d \
             --name n8n \
             -p 5678:5678 \
-            -v ${{ github.workspace }}/n8n-data:/home/node/.n8n \
             -e N8N_SECURE_COOKIE=false \
-            -e N8N_PROTOCOL=https \
             n8nio/n8n:latest
-            
-          echo "Server jalan, user admin@ngadimin.com udah siap."
-          sleep 5
+          
+          echo "Tunggu 15 detik biar booting..."
+          sleep 15
 
-      - name: 4. Start Cloudflare Tunnel
+      - name: 2. Start Cloudflare Tunnel
         run: |
-          echo "Konek ke Cloudflare..."
+          echo "Konek ke internet..."
+          # Pake token dari Secret lu
           docker run \
             --name cloudflared \
             --network host \

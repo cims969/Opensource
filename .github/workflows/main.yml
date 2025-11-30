@@ -1,41 +1,44 @@
-name: Debug n8n Crash
+name: n8n Korea Server Fix
 on: 
   workflow_dispatch:
 
 jobs:
-  debug-n8n:
+  deploy-n8n:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: 1. Start n8n (Test Database)
+      - name: 1. Start n8n (Server Korea)
         run: |
-          echo "Nyalain n8n..."
-          # Coba connect pake Pooler Singapore dulu
+          echo "Gas nyalain n8n..."
+          echo "Konek ke Region: Korea (ap-northeast-2)"
+          
+          # Kita pake CONNECTION STRING dari Secret
           docker run -d \
             --name n8n \
             -p 5678:5678 \
             -e N8N_SECURE_COOKIE=false \
+            -e N8N_PROTOCOL=https \
+            -e N8N_ENCRYPTION_KEY="kuncirahasiajuragan123" \
             -e DB_TYPE=postgresdb \
-            -e DB_POSTGRESDB_HOST="aws-0-ap-southeast-1.pooler.supabase.com" \
-            -e DB_POSTGRESDB_PORT="6543" \
-            -e DB_POSTGRESDB_DATABASE="postgres" \
-            -e DB_POSTGRESDB_USER="postgres.iziozhblgzhokbeoefei" \
-            -e DB_POSTGRESDB_PASSWORD="${{ secrets.DB_PASS }}" \
+            -e DB_POSTGRESDB_CONNECTION_STRING="${{ secrets.DB_URL }}" \
             n8nio/n8n:latest
           
-          echo "Tunggu 10 detik..."
-          sleep 10
+          echo "Lagi inisialisasi Database (Tunggu 20 detik)..."
+          sleep 20
 
-      - name: 2. CEK KENAPA N8N MATI (Liat Log Ini)
+      - name: 2. CEK STATUS (Jaga-jaga)
         run: |
-          echo "=== INI LOG ERROR NYA ==="
-          docker logs n8n
-          echo "========================="
-          
-      - name: 3. Start Cloudflare (Tetep jalanin siapa tau hokinya gede)
+          echo "=== APAKAH N8N HIDUP? ==="
+          docker ps
+          echo "=== LOG TERAKHIR ==="
+          docker logs n8n --tail 20
+
+      - name: 3. Start Cloudflare Tunnel
         run: |
+          echo "Online-kan..."
+          # Pastikan service tunnel di dashboard Cloudflare: HTTP -> 127.0.0.1:5678
           docker run \
             --name cloudflared \
             --network host \

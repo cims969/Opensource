@@ -1,4 +1,4 @@
-name: n8n Auto Login (FIX PERMISSION)
+name: n8n Auto Login (Pre-Seed Method)
 on: 
   workflow_dispatch:
 
@@ -9,36 +9,45 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: 1. Start n8n Docker
+      - name: 1. Siapin Folder Data
         run: |
-          echo "Gas nyalain n8n..."
-          # Fix permission volume biar gak rewel
-          docker run -d \
-            --name n8n \
-            -p 5678:5678 \
-            -e N8N_SECURE_COOKIE=false \
-            -e N8N_PROTOCOL=https \
-            n8nio/n8n:latest
-          
-          echo "Tidur 30 detik buat init DB..."
-          sleep 30
+          echo "Bikin folder database..."
+          mkdir -p n8n-data
+          # Jebolin permission biar Docker user (node) bisa nulis
+          chmod 777 n8n-data
 
-      - name: 2. Auto Setup Akun (User Node)
+      - name: 2. Create User Dulu (Pre-Run)
         run: |
-          echo "Inject akun admin..."
-          
-          # PERHATIKAN: --user node
-          # Ini kuncinya biar dia bisa baca database dan nemu command-nya
-          docker exec --user node n8n n8n user:management:user:create \
+          echo "Generate database & user..."
+          # Kita jalanin container SEKALI LEWAT (--rm) cuma buat bikin user
+          # Database disimpen di folder 'n8n-data'
+          docker run --rm \
+            -v ${{ github.workspace }}/n8n-data:/home/node/.n8n \
+            n8nio/n8n:latest \
+            n8n user:management:user:create \
             --email "admin@ngadimin.com" \
             --password "Juragan123!" \
             --firstName "Admin" \
             --lastName "Ganteng"
 
-      - name: 3. Start Cloudflare Tunnel
+      - name: 3. Start n8n Server (Load Data Tadi)
+        run: |
+          echo "Gas nyalain server..."
+          # Sekarang jalanin server utama pake folder data yang udah ada user-nya
+          docker run -d \
+            --name n8n \
+            -p 5678:5678 \
+            -v ${{ github.workspace }}/n8n-data:/home/node/.n8n \
+            -e N8N_SECURE_COOKIE=false \
+            -e N8N_PROTOCOL=https \
+            n8nio/n8n:latest
+            
+          echo "Server jalan, user admin@ngadimin.com udah siap."
+          sleep 5
+
+      - name: 4. Start Cloudflare Tunnel
         run: |
           echo "Konek ke Cloudflare..."
-          # Token dari SECRET
           docker run \
             --name cloudflared \
             --network host \

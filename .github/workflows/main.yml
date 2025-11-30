@@ -1,30 +1,22 @@
-name: n8n Supabase Auto Config
+name: Debug n8n Crash
 on: 
   workflow_dispatch:
 
 jobs:
-  deploy-n8n:
+  debug-n8n:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: 1. Start n8n (Fixed IPv4 Supabase)
+      - name: 1. Start n8n (Test Database)
         run: |
-          echo "Gas nyalain n8n..."
-          echo "Connect ke Project: iziozhblgzhokbeoefei"
-          
-          # Disini magic-nya. 
-          # Host pake Pooler Singapore.
-          # User pake format Pooler (postgres.projectID).
-          # Port 6543.
-          
+          echo "Nyalain n8n..."
+          # Coba connect pake Pooler Singapore dulu
           docker run -d \
             --name n8n \
             -p 5678:5678 \
             -e N8N_SECURE_COOKIE=false \
-            -e N8N_PROTOCOL=https \
-            -e N8N_ENCRYPTION_KEY="rahasiailahi123" \
             -e DB_TYPE=postgresdb \
             -e DB_POSTGRESDB_HOST="aws-0-ap-southeast-1.pooler.supabase.com" \
             -e DB_POSTGRESDB_PORT="6543" \
@@ -33,13 +25,17 @@ jobs:
             -e DB_POSTGRESDB_PASSWORD="${{ secrets.DB_PASS }}" \
             n8nio/n8n:latest
           
-          echo "Lagi inisialisasi Database (Tunggu 30 detik)..."
-          sleep 30
+          echo "Tunggu 10 detik..."
+          sleep 10
 
-      - name: 2. Start Cloudflare Tunnel
+      - name: 2. CEK KENAPA N8N MATI (Liat Log Ini)
         run: |
-          echo "Online-kan..."
-          # Kita paksa cloudflared nembak ke IPv4 lokal
+          echo "=== INI LOG ERROR NYA ==="
+          docker logs n8n
+          echo "========================="
+          
+      - name: 3. Start Cloudflare (Tetep jalanin siapa tau hokinya gede)
+        run: |
           docker run \
             --name cloudflared \
             --network host \

@@ -1,27 +1,27 @@
-name: n8n Korea Anti-Crash
+name: n8n DEBUG MODE
 on: 
   workflow_dispatch:
 
 jobs:
-  deploy-n8n:
+  debug-n8n:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: 1. Start n8n (Pecah Variable)
+      - name: 1. Start n8n (Log Level: Debug)
         run: |
-          echo "Gas nyalain n8n (Korea Server)..."
+          echo "Start n8n..."
           
-          # Kita pake metode Variable Terpisah
-          # Ini AMAN walau password lu ada karakter aneh (@ # /)
+          # Gue tambahin N8N_LOG_LEVEL=debug biar cerewet
+          # Gue tambahin SSL Reject false biar gak error sertifikat
           
           docker run -d \
             --name n8n \
             -p 5678:5678 \
             -e N8N_SECURE_COOKIE=false \
             -e N8N_PROTOCOL=https \
-            -e N8N_ENCRYPTION_KEY="kuncirahasiajuragan123" \
+            -e N8N_LOG_LEVEL=debug \
             -e DB_TYPE=postgresdb \
             -e DB_POSTGRESDB_HOST="aws-1-ap-northeast-2.pooler.supabase.com" \
             -e DB_POSTGRESDB_PORT="6543" \
@@ -31,18 +31,20 @@ jobs:
             -e DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false \
             n8nio/n8n:latest
           
-          echo "Lagi inisialisasi Database (Tunggu 20 detik)..."
+          echo "Nunggu 20 detik..."
           sleep 20
 
-      - name: 2. CEK LOG (Kalo Masih Error Liat Sini)
+      - name: 2. >>> LIAT ERROR DISINI <<<
+        if: always() # Step ini bakal tetep jalan walau n8n mati
         run: |
-          echo "=== LOG N8N ==="
-          docker logs n8n --tail 50
-          echo "==============="
+          echo "=========================================="
+          echo "   INI ISI PERUT N8N (ERROR LOG)   "
+          echo "=========================================="
+          docker logs n8n
+          echo "=========================================="
 
       - name: 3. Start Cloudflare Tunnel
         run: |
-          echo "Online-kan..."
           docker run \
             --name cloudflared \
             --network host \

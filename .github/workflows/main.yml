@@ -1,4 +1,4 @@
-name: n8n Supabase Permanent
+name: n8n Supabase Auto Config
 on: 
   workflow_dispatch:
 
@@ -9,32 +9,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: 1. Start n8n (Konek Supabase)
+      - name: 1. Start n8n (Fixed IPv4 Supabase)
         run: |
           echo "Gas nyalain n8n..."
-          echo "Konek ke: db.iziozhblgzhokbeoefei.supabase.co"
+          echo "Connect ke Project: iziozhblgzhokbeoefei"
+          
+          # Disini magic-nya. 
+          # Host pake Pooler Singapore.
+          # User pake format Pooler (postgres.projectID).
+          # Port 6543.
           
           docker run -d \
             --name n8n \
             -p 5678:5678 \
             -e N8N_SECURE_COOKIE=false \
             -e N8N_PROTOCOL=https \
-            -e N8N_ENCRYPTION_KEY="kuncirahasiajuragan123" \
+            -e N8N_ENCRYPTION_KEY="rahasiailahi123" \
             -e DB_TYPE=postgresdb \
-            -e DB_POSTGRESDB_HOST="db.iziozhblgzhokbeoefei.supabase.co" \
-            -e DB_POSTGRESDB_PORT="5432" \
+            -e DB_POSTGRESDB_HOST="aws-0-ap-southeast-1.pooler.supabase.com" \
+            -e DB_POSTGRESDB_PORT="6543" \
             -e DB_POSTGRESDB_DATABASE="postgres" \
-            -e DB_POSTGRESDB_USER="postgres" \
+            -e DB_POSTGRESDB_USER="postgres.iziozhblgzhokbeoefei" \
             -e DB_POSTGRESDB_PASSWORD="${{ secrets.DB_PASS }}" \
             n8nio/n8n:latest
           
-          echo "Lagi inisialisasi Database Supabase (Tunggu 30 detik)..."
-          # Wajib nunggu agak lama karena pertama kali dia bakal bikin tabel banyak banget
+          echo "Lagi inisialisasi Database (Tunggu 30 detik)..."
           sleep 30
 
       - name: 2. Start Cloudflare Tunnel
         run: |
           echo "Online-kan..."
+          # Kita paksa cloudflared nembak ke IPv4 lokal
           docker run \
             --name cloudflared \
             --network host \

@@ -1,22 +1,38 @@
-name: Jalanin n8n dengan Public URL
+name: n8n via Cloudflare Tunnel
 on: 
-  workflow_dispatch:
+  workflow_dispatch: # Trigger manual
 
 jobs:
-  n8n-live:
+  start-n8n-cf:
     runs-on: ubuntu-latest
     steps:
-      - name: Run n8n Docker
-        run: |
-          docker run -d --name n8n -p 5678:5678 -e N8N_SECURE_COOKIE=false n8nio/n8n:latest
-          echo "Lagi booting n8n..."
-          sleep 10
+      - name: 1. Checkout (Basa-basi doang)
+        uses: actions/checkout@v3
 
-      - name: Install Localtunnel
-        run: npm install -g localtunnel
-
-      - name: Buka Tunnel (Public URL)
+      - name: 2. Gas Jalanin n8n (Docker)
         run: |
-          echo "Nih URL n8n lu (klik aja):"
-          # Ini bakal nahan process biar gak langsung close
-          lt --port 5678
+          echo "Sedang memanggil n8n..."
+          # Kita jalanin n8n di port 5678
+          # Pake mode detached (-d) biar jalan di background
+          docker run -d \
+            --name n8n \
+            -p 5678:5678 \
+            -e N8N_SECURE_COOKIE=false \
+            -e N8N_PROTOCOL=https \
+            n8nio/n8n:latest
+          
+          echo "Tunggu 15 detik biar n8n loading dulu..."
+          sleep 15
+
+      - name: 3. Tembak Cloudflare Tunnel
+        run: |
+          echo "Konek ke Cloudflare Zero Trust..."
+          # Kita pake image cloudflared resmi
+          # Pake --network host biar si container ini bisa akses localhost:5678 punya n8n
+          # Perintah ini dijalankan TANPA -d (foreground) biar action gak langsung mati
+          
+          docker run \
+            --name cloudflared \
+            --network host \
+            cloudflare/cloudflared:latest \
+            tunnel --no-autoupdate run --token ${{ secrets.CF_TOKEN }}

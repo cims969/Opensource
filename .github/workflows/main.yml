@@ -1,36 +1,42 @@
-name: n8n via Cloudflare Tunnel
+name: n8n Auto-Setup Owner
 on: 
-  workflow_dispatch: # Trigger manual
+  workflow_dispatch:
 
 jobs:
-  start-n8n-cf:
+  n8n-auto-setup:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Checkout (Basa-basi doang)
+      - name: 1. Checkout
         uses: actions/checkout@v3
 
-      - name: 2. Gas Jalanin n8n (Docker)
+      - name: 2. Start n8n Container
         run: |
-          echo "Sedang memanggil n8n..."
-          # Kita jalanin n8n di port 5678
-          # Pake mode detached (-d) biar jalan di background
+          echo "Starting n8n container..."
           docker run -d \
             --name n8n \
             -p 5678:5678 \
             -e N8N_SECURE_COOKIE=false \
             -e N8N_PROTOCOL=https \
+            -e WEBHOOK_URL=https://n8n.domainlu.com \
             n8nio/n8n:latest
           
-          echo "Tunggu 15 detik biar n8n loading dulu..."
-          sleep 15
+          echo "Tunggu 25 detik biar database n8n siap..."
+          # Harus agak lama biar DB-nya ready buat di-inject user
+          sleep 25
 
-      - name: 3. Tembak Cloudflare Tunnel
+      - name: 3. Auto-Create Owner Account
         run: |
-          echo "Konek ke Cloudflare Zero Trust..."
-          # Kita pake image cloudflared resmi
-          # Pake --network host biar si container ini bisa akses localhost:5678 punya n8n
-          # Perintah ini dijalankan TANPA -d (foreground) biar action gak langsung mati
-          
+          echo "Bikin akun owner otomatis..."
+          # Kita masuk ke dalem container (docker exec) terus jalanin command n8n user:create
+          docker exec n8n n8n user:create \
+            --email "${{ secrets.N8N_EMAIL }}" \
+            --password "${{ secrets.N8N_PASSWORD }}" \
+            --firstName "Juragan" \
+            --lastName "Cok"
+
+      - name: 4. Start Cloudflare Tunnel
+        run: |
+          echo "Gas buka tunnel..."
           docker run \
             --name cloudflared \
             --network host \
